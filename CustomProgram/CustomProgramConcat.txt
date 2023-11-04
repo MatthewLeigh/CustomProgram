@@ -1,0 +1,2357 @@
+//
+// Code also available on github:
+// https://github.com/MatthewLeigh/CustomProgram/tree/main/CustomProgram/CustomProgram
+//
+
+global using System;
+global using System.Collections.Generic;
+global using System.Linq;
+global using System.Numerics;
+global using System.Security.Cryptography.X509Certificates;
+global using System.Text;
+global using System.Threading.Tasks;
+global using SplashKitSDK;
+
+namespace CustomProgram
+{
+    public class Program
+    {
+        public static void Main()
+        {
+            GameManager gameManager = new GameManager();
+            Window window = gameManager.GameWindow;
+
+            do
+            {
+                SplashKit.ProcessEvents();
+                SplashKit.ClearScreen();
+
+                gameManager.RunCycle();
+
+                SplashKit.RefreshScreen();
+
+            } while (!window.CloseRequested);
+        }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public interface IUpdateEachCycle
+    {
+        // Calls all the classes methods which need to update each gameplay cycle.
+        public void RunCycle();
+    } 
+}
+
+
+namespace CustomProgram
+{
+    public class GameManager : IUpdateEachCycle
+    {
+        private string _gameName;
+        private int _numTilesX;
+        private int _numTilesY;
+        private int _tileSize;
+
+        private Map _map;
+        private Window _window;
+        private Navigator _cartographer;
+        private CharacterManager _characterMangaer;
+        private CommandManager _commandManager;
+        // private PhraseManager _phraseManager; // To Be Implemented.
+
+        private List<IUpdateEachCycle> _updatesEachCycle;
+
+        // Constructor :
+        public GameManager(string gameName, int numTilesX, int numTilesY, int tileSize)
+        {
+            _gameName = gameName;
+            _numTilesX = numTilesX;
+            _numTilesY = numTilesY;
+            _tileSize = tileSize;
+
+            _map = new Map(_numTilesX, _numTilesY, _tileSize);
+            _window = new Window(_gameName, _map.Width, _map.Height);
+
+            _cartographer = new Navigator(_map);
+            _characterMangaer = new CharacterManager(_cartographer);
+            _commandManager = new CommandManager(_cartographer, _characterMangaer);
+            // _phraseManager = new PhraseManager(_characterMangaer); // To Be Implemented.
+
+            _updatesEachCycle = new List<IUpdateEachCycle> { _map, _characterMangaer, _commandManager, }; // _phraseManager // To Be Implemented.
+        }
+
+        // Constructor: Pass default values to main constructor.
+        public GameManager() : this("No Man Is An Island", 50, 40, 16) { }
+
+        // Implements IUpdateEachCycle interface. Calls all IUpdateEachCycle objects in GameManager to RunCycle().
+        public void RunCycle()
+        {
+            foreach (IUpdateEachCycle updateClass in _updatesEachCycle)
+            {
+                try
+                {
+                    updateClass.RunCycle();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+            }
+        }
+
+        public Window GameWindow { get { return _window; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class ColorPalette
+    {
+        private static ColorPalette? _instance;
+
+        private List<IColorPalette> _palettes;
+        private IColorPalette _current;
+
+        private int _index = 0;
+
+        // Private Constructor:
+        private ColorPalette()
+        {
+            _palettes = new List<IColorPalette>
+            {
+                new Pastel(),
+                new Bold(),
+            };
+
+            _current = _palettes[_index];
+        }
+
+        // Singleton Class. Provides access to the instance.
+        // Allows a single point in the program to set and get the IColorPalette
+        public static ColorPalette Instance()
+        {
+            if (_instance == null)
+            {
+                _instance = new ColorPalette();
+            }
+            return _instance;
+        }
+
+        // Increment the pallete index by one, or reset to zero if already at max.
+        // Set current palette based on new index.
+        public void Rotate()
+        {
+            if (_index < _palettes.Count - 1) 
+            {
+                _index++;
+            }
+            else
+            {
+                _index = 0;
+            }
+            _current = _palettes[_index];
+        }
+
+        public IColorPalette Current { get { return _current; } set { _current = value; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    // Interface: Defines the Color parameters that each IColorPalette needs to provide.
+    public interface IColorPalette
+    {
+        public Color DarkBlue { get; }
+        public Color LightBlue { get; }
+        public Color LightYellow { get; }
+        public Color LightGreen { get; }
+        public Color DarkGreen { get; }
+        public Color Orange { get; }
+        public Color LightBrown { get; }
+        public Color DarkBrown { get; }
+        public Color Villager { get; }
+        public Color TextMain { get; }
+        public Color TextSecondary { get; }
+        public Color Invalid { get; }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class Pastel : IColorPalette
+    {
+        private Color _darkBlue = Color.RGBColor(96, 182, 255);
+        private Color _lightBlue = Color.RGBColor(135, 196, 255);
+        private Color _lightYellow = Color.RGBColor(249, 181, 114);
+        private Color _lightGreen = Color.RGBColor(153, 176, 128);
+        private Color _darkGreen = Color.RGBColor(116, 142, 99);
+        private Color _orange = Color.RGBColor(255, 155, 80);
+        private Color _lightBrown = Color.RGBColor(218, 221, 177);
+        private Color _darkBrown = Color.RGBColor(72, 54, 29);
+        private Color _villager = Color.RGBColor(187, 90, 90);
+        private Color _textMain = Color.RGBColor(39, 40, 41);
+        private Color _textSecondary = Color.RGBColor(35, 34, 30);
+        private Color _invalid = Color.Red;
+
+        public Color DarkBlue { get { return _darkBlue;} }
+        public Color LightBlue { get { return _lightBlue;} }
+        public Color LightYellow { get { return _lightYellow;} }
+        public Color LightGreen { get { return _lightGreen;} }
+        public Color DarkGreen { get { return _darkGreen;} }
+        public Color Orange { get { return _orange;} }
+        public Color LightBrown { get { return _lightBrown; } }
+        public Color DarkBrown { get { return _darkBrown; } }
+        public Color Villager { get { return _villager; } }
+        public Color TextMain { get { return _textMain; } }
+        public Color TextSecondary { get { return _textSecondary; } }
+        public Color Invalid { get { return _invalid;} }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class Bold : IColorPalette
+    {
+        private Color _darkBlue = Color.DarkBlue;
+        private Color _lightBlue = Color.Blue;
+        private Color _lightYellow = Color.Yellow;
+        private Color _lightGreen = Color.Green;
+        private Color _darkGreen = Color.DarkGreen;
+        private Color _orange = Color.Orange;
+        private Color _lightBrown = Color.SandyBrown;
+        private Color _darkBrown = Color.Brown;
+        private Color _villager = Color.Black;
+        private Color _textMain = Color.Black;
+        private Color _textSecondary = Color.DarkGray;
+        private Color _invalid = Color.Red;
+
+        public Color DarkBlue { get { return _darkBlue; } }
+        public Color LightBlue { get { return _lightBlue; } }
+        public Color LightYellow { get { return _lightYellow; } }
+        public Color LightGreen { get { return _lightGreen; } }
+        public Color DarkGreen { get { return _darkGreen; } }
+        public Color Orange { get { return _orange; } }
+        public Color LightBrown { get { return _lightBrown; } }
+        public Color DarkBrown { get { return _darkBrown; } }
+        public Color Villager { get { return _villager; } }
+        public Color TextMain { get { return _textMain; } }
+        public Color TextSecondary { get { return _textSecondary; } }
+        public Color Invalid { get { return _invalid; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class Map : IUpdateEachCycle
+    {
+        private Noise _noise;
+        private List<Point2D> _coordsList;
+        private Dictionary<Point2D, Tile> _tilesAtCoords;
+
+        private int _startingX;
+        private int _startingY;
+        private int _numX;
+        private int _numY;
+        private int _tileSize;
+
+        private List<int> _tilesXList;
+        private List<int> _tilesYList;
+
+        // Constructor: 
+        public Map(int startingX, int startingY, int numX, int numY, int tileSize)
+        {
+            _noise = new Noise(numX, numY);
+            _coordsList = new List<Point2D>();
+            _tilesAtCoords = new Dictionary<Point2D, Tile>();
+
+            _startingX = startingX;
+            _startingY = startingY;
+            _numX = numX;
+            _numY = numY;
+            _tileSize = tileSize;
+
+            _tilesXList = new List<int>();
+            _tilesYList = new List<int>();
+
+            Generate();
+        }
+
+        // Constructor: Passess the main constructor default 0,0 Cartersian Coordinates for the startingX and startingY location.
+        public Map(int numX, int numY, int tileSize) : this(0, 0, numX, numY, tileSize) { }
+
+        // Generate a List of Tiles based on the Map's Noise values.
+        // For each X and Y location where a Tile is required, generate a Tile and Point2D. Add these to a dictionary. 
+        // Clear the Dictionary and List before generating new Keys, to avoid unwanted values remaining.
+        private void Generate()
+        {
+            _tilesAtCoords.Clear();
+            _coordsList.Clear();
+
+            _tilesXList = SetTilesCoordsOneDimension(_startingX, _numX, _tileSize);
+            _tilesYList = SetTilesCoordsOneDimension(_startingY, _numY, _tileSize);
+
+            for (int n = 0; n < _numY; n++)
+            {
+                for (int m = 0; m < _numX; m++)
+                {
+                    Tile _tile = new Tile(_noise.Matrix[m, n]);
+                    Point2D _coords = new Point2D() { X = _tilesXList[m], Y = _tilesYList[n] };
+                    _coordsList.Add(_coords);
+                    _tilesAtCoords.Add(_coords, _tile);
+                }
+            }
+        }
+
+        // Updates the X and Y coordinates for the Tiles in the Map based on the tileSize passed in.
+        public void UpdateMapTileSize(int tileSize)
+        {
+            _tileSize = tileSize;
+            Generate();
+        }
+
+        // Updates the the starting X and Y coordinates for the Map.
+        public void UpdateMapBaseCoords(int startingX, int startingY)
+        {
+            _startingX = startingX;
+            _startingY = startingY;
+            Generate();
+        }
+
+        // Sets all the X or Y coordinates for the Tiles in the Map.
+        private List<int> SetTilesCoordsOneDimension(int startingPoint, int numTile, int tileSize)
+        {
+            List<int> _returnCoords = new List<int>();
+
+            for (int i = 0; i < numTile; i++)
+            {
+                int _value = startingPoint + (i * tileSize);
+                _returnCoords.Add(_value);
+            }
+            return _returnCoords;
+        }
+
+        // Calls each Tile in the Map to Draw itself.
+        public void Draw()
+        {
+            for (int i = 0; i < _coordsList.Count; i++)
+            {
+                Tile _tile = _tilesAtCoords[_coordsList[i]];
+                Point2D _point2D = _coordsList[i];
+                _tile.Draw(_point2D, _tileSize);
+            }
+        }
+
+        // Calls all the classes methods which need to update each gameplay cycle.
+        public void RunCycle()
+        {
+            Draw();
+            try
+            {
+                Draw();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
+
+        public Dictionary<Point2D, Tile> TilesAtCoords { get { return _tilesAtCoords; } }
+        public List<Point2D> CoordsList { get { return _coordsList; } }
+        public int X { get { return _startingX; } }
+        public int Y { get { return _startingY; } }
+        public int NumX { get { return _numX; } }
+        public int NumY { get { return _numY; } }
+        public int TileSize { get { return _tileSize; } }
+        public int Width { get { return _numX * _tileSize; } }
+        public int Height { get { return _numY * _tileSize; } }
+        public List<int> TilesXList { get { return _tilesXList; } }
+        public List<int> TilesYList { get { return _tilesYList; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class Navigator
+    {
+        //
+        // Note: 'Wetness' refers to whether the represented TileType is 'wet' or 'dry'. Refer to TileType enum in Tile class.
+        // TileTypes of Sand or higher are considered dry.
+        // Tile Types of Water or lower are considered wet.
+        // TileType == 0 is None and represents an invalid Tile.
+        //
+
+        private Map _map;
+        private List<Point2D> _dryTileLocations;
+        private List<Point2D> _wetTileLocations;
+        private List<Point2D> _allTileLocations;
+
+        private Random _random = new Random();
+
+        // Constructor: 
+        public Navigator(Map map)
+        {
+            _map = map;
+            _allTileLocations = CoordsForAllTilesofCertainWetness(true, true);
+            _dryTileLocations = CoordsForAllTilesofCertainWetness(true, false);
+            _wetTileLocations = CoordsForAllTilesofCertainWetness(false, true);
+        }
+
+        // Returns the TileType at the Point2D location that is passed in.
+        public TileType OnTileType(Point2D coords)
+        {
+            int _roundedX = 0;
+            foreach (int x in _map.TilesXList)
+            {
+                if (coords.X >= x)
+                {
+                    _roundedX = x;
+                }
+            }
+
+            int _roundedY = 0;
+            foreach (int y in _map.TilesYList)
+            {
+                if (coords.Y >= y)
+                {
+                    _roundedY = y;
+                }
+            }
+
+            Point2D _roundedCoords = new Point2D() { X = _roundedX, Y = _roundedY };
+
+            foreach (Point2D _tileCoords in _allTileLocations)
+            {
+                if (_roundedCoords.X == _tileCoords.X && _roundedCoords.Y == _tileCoords.Y)
+                {
+                    return _map.TilesAtCoords[_tileCoords].TileType;
+                }
+            }
+
+            throw new Exception("Could not locate which Tile the object at these coords is currently on.");
+        }
+
+        // Returns a List of the Point2D coords of all Tiles of the passed in TileType.
+        public List<Point2D> CoordsForAllTilesOfType(TileType type)
+        {
+            List<Point2D> _returnList = new List<Point2D>();
+
+            foreach (Point2D point in _map.CoordsList)
+            {
+                if (_map.TilesAtCoords[point].TileType == type)
+                {
+                    _returnList.Add(point);
+                }
+            }
+
+            if (_returnList.Count > 0)
+            {
+                return _returnList;
+            }
+
+            throw new Exception($"No Tiles of TileType {type} exist within the Map");
+        }
+
+        // Returns a List of the Point2D coords of all Tiles of the passed in List of TileTypes.
+        public List<Point2D> CoordsForAllTilesOfType(List<TileType> types)
+        {
+            List<Point2D> _returnList = new List<Point2D>();
+
+            foreach (TileType type in types)
+            {
+                _returnList.AddRange(CoordsForAllTilesOfType(type));
+            }
+
+            if (_returnList.Count > 0)
+            {
+                return _returnList;
+            }
+
+            throw new Exception("No Tiles of the specified TileType exist within the Map");
+        }
+
+        // Returns a List of the Point2D coords of all WalkableTiles or not WalkableTiles depending on bool passed in.
+        // TileType enums of Sand or higher are considered dry. TileType enums greater than None and lower than Sand are considered wet.
+        public List<Point2D> CoordsForAllTilesofCertainWetness(bool isDry, bool isWet)
+        {
+            List<TileType> _validTileTypes = new List<TileType>();
+
+            foreach (TileType type in Enum.GetValues(typeof(TileType)))
+            {
+                if (isDry)
+                {
+                    if (type >= TileType.Sand)
+                    {
+                        _validTileTypes.Add(type);
+                    }
+                }
+                if (isWet)
+                {
+                    if (type > TileType.None && type < TileType.Sand)
+                    {
+                        _validTileTypes.Add(type);
+                    }
+                }
+            }
+            return CoordsForAllTilesOfType(_validTileTypes);
+        }
+
+        // Returns True if the Point2D coords on a Tile of the Specified Wetness
+        public bool CanBeOnTile(Point2D coords, bool onDry, bool onWet)
+        {
+            TileType _onType = OnTileType(coords);
+
+            if (onDry && onWet)
+            {
+                return (_onType > TileType.None);
+            }
+
+            if (onDry && !onWet)
+            {
+                return (_onType >= TileType.Sand);
+            }
+
+            if (!onDry && onWet)
+            {
+                return (_onType > TileType.None && _onType < TileType.Sand);
+            }
+
+            if (!onDry && !onWet)
+            {
+                throw new ArgumentException("Atleast one of 'onDry' and 'onWet' must be True.");
+            }
+
+            return false;
+        }
+
+        // Returns a random Point2D Coordiante where the Tile meets to parameters.
+        public Point2D RandomCoords(bool onDry, bool onWet)
+        {
+            if (onDry && onWet)
+            {
+                return _allTileLocations[_random.Next(_allTileLocations.Count - 1)];
+            }
+
+            if (onDry && !onWet)
+            {
+                return _dryTileLocations[_random.Next(_dryTileLocations.Count - 1)];
+            }
+
+            if (!onDry && onWet)
+            {
+                return _wetTileLocations[_random.Next(_wetTileLocations.Count - 1)];
+            }
+
+            if (!onDry && !onWet)
+            {
+                throw new ArgumentException("Atleast one of 'onDry' and 'onWet' must be True.");
+            }
+
+            throw new Exception();
+        }
+
+        public int MapHeight { get { return _map.Height; } }
+        public int MapWidth { get { return _map.Width; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    // Enumeration: TileType can be thought of in terms of layers of elevation. The greater the enumerable value, the higher the elevation of the tile.     
+    public enum TileType
+    {
+        None,
+        DeepWater,
+        Water,
+        Sand,
+        Grass,
+        Forest
+    }
+
+    public class Tile
+    {
+        private TileType _type;
+        private bool _isWalkable;
+
+        // Constructor: Creates a Tile of the TileType requested.
+        public Tile(TileType type)
+        {
+            _type = type;
+            _isWalkable = SetIsWalkable();
+        }
+
+        // Constructor: Creates a Tile with a TileType based on method CenvertNoiseValueToTileType.
+        public Tile(float noiseValue)
+        {
+            if (noiseValue >= 0 && noiseValue <= 255)
+            {
+                _type = ConvertNoiseValueToTileType(noiseValue);
+                _isWalkable = SetIsWalkable();
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException($"Parameter noiseValue must be between 0 and 255 inclusive. Constructor received value of {noiseValue}.");
+            }
+        }
+
+        // Tile draws itself to the screen using SplashKit.FillRectangle() based on coordiantes passed in.
+        public void Draw(Point2D coords, int tileSize)
+        {
+            Color _color = SetColor();
+            SplashKit.FillRectangle(_color, coords.X, coords.Y, tileSize, tileSize);
+        }
+
+        // Returns True if the TileType is Sand or higher. Otherwise, return False.
+        private bool SetIsWalkable()
+        {
+            return (_type >= TileType.Sand);
+        }
+
+        // Converts a float value between 0 and 255 inclusive to a TileType.
+        // Values have been arbitrarily selected based on trial and error when float _scale in class Noise is 0.04f.
+        // Note: Implementation could be improved so that the two classes do not depend on each other.
+        private TileType ConvertNoiseValueToTileType(float noiseValue)
+        {
+            switch (noiseValue)
+            {
+                case < 60:
+                    return TileType.DeepWater;
+
+                case < 120:
+                    return TileType.Water;
+
+                case < 140:
+                    return TileType.Sand;
+
+                case < 180:
+                    return TileType.Grass;
+
+                case <= 255:
+                    return TileType.Forest;
+
+                default:
+                    return TileType.None;
+            }
+        }
+
+        // Determines which Color the Tile should be drawn as, based on it's TileType.
+        private Color SetColor()
+        {
+            IColorPalette _colorPalette = ColorPalette.Instance().Current;
+
+            switch (_type)
+            {
+                case TileType.DeepWater:
+                    return _colorPalette.DarkBlue;
+
+                case TileType.Water:
+                    return _colorPalette.LightBlue;
+
+                case TileType.Sand:
+                    return _colorPalette.LightYellow;
+
+                case TileType.Grass:
+                    return _colorPalette.LightGreen;
+
+                case TileType.Forest:
+                    return _colorPalette.DarkGreen;
+
+                default:
+                    return _colorPalette.Invalid;
+            }
+        }
+
+        public TileType TileType { get { return _type; } }
+        public bool IsWalkable { get { return _isWalkable; } }
+    }
+}
+
+
+using SimplexNoise;
+
+namespace CustomProgram
+{
+    public class Noise
+    {
+        private float _scale = 0.04f; // Lower = flatter world.
+        private int _rows;
+        private int _columns;
+        private float[,] _matrix;
+
+        // Constructor:
+        public Noise(int rows, int columns)
+        {
+            _rows = rows;
+            _columns = columns;
+            _matrix = Generate(rows, columns);
+        }
+
+        // Generates and returns a random 2D SimplexNoise float matrix. 
+        private float[,] Generate(int rows, int columns)
+        {
+            Random _random = new Random();
+            SimplexNoise.Noise.Seed = _random.Next();
+            return SimplexNoise.Noise.Calc2D(rows, columns, _scale);
+        }
+
+        public int Rows { get { return _rows; } }
+        public int Columns { get { return _columns; } }
+        public float[,] Matrix { get { return _matrix; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class Inventory
+    {
+        private List<Item> _items;
+
+        // Constructor:
+        public Inventory()
+        {
+            _items = new List<Item>();
+        }
+
+        // Returns true if _items containts the Item which is passed in. Otherwise, returns false.
+        public bool HasItem(Item item)
+        {
+            foreach (Item checkItem in _items)
+            {
+                if (checkItem == item)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Returns True if _items contains an Item of the passed in ItemType.
+        public bool HasItemOfType(ItemType type)
+        {
+            foreach (Item item in _items)
+            {
+                if (item.ItemType == (type))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Adds an Item to the _items List.
+        public void Add(Item item)
+        {
+            _items.Add(item);
+        }
+
+        // Adds a List<Item> to the _items List.
+        public void Add(List<Item> items)
+        {
+            foreach (Item item in items)
+            {
+                _items.Add(item);
+            }
+        }
+
+        // Returns the Item, and does not remove the object from _items.
+        // Throws an ArgumentException if Item is not in _items.
+        public Item Fetch(Item item)
+        {
+            foreach (Item checkItem in _items)
+            {
+                if (checkItem == item)
+                {
+                    return checkItem;
+                }
+            }
+            throw new ArgumentException("Item is not currently in this Inventory");
+        }
+
+        // Returns the Item, and removes the object from _items.
+        public Item Take(Item item)
+        {
+            Item _takenItem = Fetch(item);
+            _items.Remove(_takenItem);
+            return _takenItem;
+        }
+
+        // Returns the first Item of a specified ItemType.
+        // Returns null if no Items of specifiec ItemType in List.
+        public Item? TakeItemOfType(ItemType type)
+        {
+            foreach (Item item in _items)
+            {
+                if (item.ItemType == type)
+                {
+                    return Take(item);
+                }
+            }
+            return null;
+        }
+
+        public List<Item> Items { get { return _items; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    // Enumeration: ItemType impacts how an Item is used within the game.
+    public enum ItemType
+    {
+        SwimWear,
+        Weapon,
+        Vision,
+        Food
+    }
+
+    public class Item
+    {
+        public ItemType _type;
+        public string _name;
+        public string _description;
+
+        // Constructor:
+        public Item(ItemType type, string name, string description)
+        {
+            _type = type;
+            _name = name.ToLower();
+            _description = description.ToLower();
+        }
+
+        public ItemType ItemType { get { return _type; } }
+        public string Name { get { return _name; } }
+        public string Description { get { return _description; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public abstract class DrawableObject
+    {
+        private Point2D _spawnCoords;
+        private Point2D _currentCoords;
+
+        private int _tileSize;
+
+        // Constructor:
+        public DrawableObject(Point2D coords, int tileSize)
+        {
+            _spawnCoords = coords;
+            _currentCoords = coords;
+
+            _tileSize = tileSize;
+        }
+
+        // Constructor: Converts the int X and Y values to a Point2D instance and passes this to the main constructor.
+        public DrawableObject(int x, int y, int tileSize) : this(new Point2D() { Y = y, X = x }, tileSize) { }
+
+        // The DrawableObject draws itself to the screen.
+        public abstract void Draw();
+
+
+        public Point2D SpawCoords { get { return _spawnCoords; } }
+        public Point2D Coords { get { return _currentCoords; } set { _currentCoords = value; } }
+        public double X { get { return _currentCoords.X; } set { _currentCoords.X = value; } }
+        public double Y { get { return _currentCoords.Y; } set { _currentCoords.Y = value; } }
+        public double DrawX { get { return _currentCoords.X - (_tileSize / 2); } }
+        public double DrawY { get { return _currentCoords.Y - (_tileSize / 2); } }
+        public int TileSize { get { return _tileSize; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CharacterManager : IUpdateEachCycle
+    {
+        private bool _displayStats = true;
+        private bool _displayAnimalNames = false;
+        private int _characterIndex = 0;
+        private int _numVillagers;
+        private int _numAnimals;
+
+        private List<Character> _characters;
+        private List<Character> _playableCharacters;
+
+        private Navigator _navigator;
+        private CharacterFactory _characterFactory;
+
+        // Constructor: 
+        public CharacterManager(Navigator navigator, int numVillagers, int numAnimals)
+        {
+            _numVillagers = numVillagers;
+            _numAnimals = numAnimals;
+            EnsureEnoughAnimals();
+
+            _characters = new List<Character>(_numVillagers + _numAnimals);
+            _playableCharacters = new List<Character>(_numVillagers);
+
+            _navigator = navigator;
+            _characterFactory = new CharacterFactory(_navigator);
+
+            InstantiateCharacters();
+            SetUpPlayableCharcaters();
+
+        }
+
+        // Constructor: Pass default numVillagers and numAnimals to main constructor.
+        public CharacterManager(Navigator navigator) : this(navigator, 3, 15) { }
+
+        // Ensures that there is always atelast one Animal for every Villager.
+        private void EnsureEnoughAnimals()
+        {
+            if (_numAnimals < _numVillagers)
+            {
+                _numAnimals = _numVillagers;
+            }
+        }
+
+        // Instantiate Characters based on int _numVillagers and int_numAnimals. 
+        private void InstantiateCharacters()
+        {
+            for (int i = 0; i < _numVillagers;  i++)
+            {
+                _characters.Add(_characterFactory.Instantiate(CharacterType.Villager));
+            }
+
+            for (int i = 0; i < _numAnimals; i++)
+            {
+                CharacterType _animal = (CharacterType)SplashKit.Rnd(1, 4);
+                _characters.Add(_characterFactory.Instantiate(_animal));
+            }
+        }
+
+        // Adds all Villagers to _playableCharacters list. 
+        // Calls InitilialiseCharacterItems Singleton class to distribute game Items amongst characters.
+        private void SetUpPlayableCharcaters()
+        {
+            foreach (Character character in _characters)
+            {
+                if (character is Villager)
+                {
+                    _playableCharacters.Add(character);
+                }
+            }
+            InitialiseCharacterItems.Instance().Distribute(_playableCharacters);
+        }
+
+        // Calls all Characters to draw themselves to the screen.
+        // Animals have certain checks they need to pass to determine if they will be drawn, and if their name will be drawn.
+        public void Draw()
+        {
+            foreach (Character character in _characters)
+            {
+                if (character is Animal)
+                {
+                    if (_playableCharacters[_characterIndex].Inventory.HasItemOfType(ItemType.Vision))
+                    {
+                        character.Draw();
+
+                        if (_displayAnimalNames)
+                        {
+                            character.DrawName();
+                        }
+
+                    }
+                }
+            }
+
+            foreach (Character character in _characters)
+            {
+                if (character is Villager)
+                {
+                    character.Draw();
+                }
+            }
+        }
+
+        // Draws the current Character's 'stats' to the top left of the screen.
+        // 'Stats' are the strings returned by calling FullDescription() on the Character.
+        public void DrawStats()
+        {
+            if (_displayStats)
+            {
+                Color _color = ColorPalette.Instance().Current.TextMain;
+                int _x = 15;
+                int _y = 15;
+                int _lineSpacing = 15;
+
+                foreach (string line in CurrentCharacter.FullDescription())
+                {
+                    SplashKit.DrawText(line, _color, _x, _y);
+                    _y += _lineSpacing;
+                }
+            }
+        }
+
+        // Increment the character index by one, or reset to zero if already at max.
+        public void RotateCharacter()
+        {
+            if (_characterIndex < (_playableCharacters.Count - 1))
+            {
+                _characterIndex++;
+            }
+            else
+            {
+                _characterIndex = 0;
+            }
+        }
+
+        // Toogle the bool _displayAnimalNames.
+        public void ToggleDisplayAnimalNames()
+        {
+            _displayAnimalNames = !_displayAnimalNames;
+        }
+
+        // Implements IUpdateEachCycle interface by calling all the classes methods which need to update each gameplay cycle.
+        public void RunCycle()
+        {
+            try
+            {
+                Draw();
+                DrawStats();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
+
+
+        public Character CurrentCharacter { get {  return _playableCharacters[_characterIndex]; } }
+        public List<Character> AllCharcaters { get { return _characters; } } 
+        public List<Character> PlayableCharacters { get { return _playableCharacters; } } 
+        public int CurrentCharacterIndex { get { return _characterIndex; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class InitialiseCharacterItems
+    {
+        private static InitialiseCharacterItems? instance;
+        private bool _initialized = false;
+
+        private Inventory _gameItems;
+        private Item _flippers;
+        private Item _fishingNet;
+        private Item _glasses;
+
+        private Random _random = new Random();
+
+        // Private Constructor: 
+        private InitialiseCharacterItems()
+        {
+            _flippers = new Item(ItemType.SwimWear, "Flippers", "Helps you swim");
+            _fishingNet = new Item(ItemType.Weapon, "Fishing Net", "Big enough to catch a cow-sized fish!");
+            _glasses = new Item(ItemType.Vision, "Glasses", "You can see everything now!");
+
+            _gameItems = new Inventory();
+            _gameItems.Add(_flippers);
+            _gameItems.Add(_fishingNet);
+            _gameItems.Add(_glasses);
+        }
+
+        // Singleton Class. Provides access to the instance.
+        public static InitialiseCharacterItems Instance()
+        {
+            if (instance == null)
+            {
+                instance = new InitialiseCharacterItems();
+            }
+            return instance;
+        }
+
+        // Distribute Game Items amongst the List of Characters.
+        // Can only be invoked once. If already initialized, method does not execute and code.
+        public void Distribute(List<Character> characters)
+        {
+            if (!_initialized)
+            {
+                if (characters.Count >= _gameItems.Items.Count)
+                {
+                    for (int i = 0; i < _gameItems.Items.Count; i++)
+                    {
+                        characters[i].Inventory.Add(_gameItems.Items[i]);
+                    }
+                }
+                else
+                {
+                    foreach (Item item in _gameItems.Items)
+                    {
+                        characters[_random.Next(characters.Count - 1)].Inventory.Add(item);
+                    }
+                }
+                _initialized = true;
+            }
+        }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public abstract class Character : DrawableObject
+    {
+        private string _name;
+        private string _description;
+        private Inventory _inventory;
+        private Phrases _phrases;
+
+        // Construtor:
+        public Character(string name, string description, Point2D coords, int tileSize) : base(coords, tileSize)
+        {
+            _name = name.ToLower();
+            _description = description.ToLower();
+            _inventory = new Inventory();
+            _phrases = new Phrases();
+        }
+
+        // Returns a List of formatted strings with the Characters Name, Description, Coords, and Inventory. 
+        public List<string> FullDescription()
+        {
+            List<string> _description = new List<string>();
+
+            _description.Add($"{StringFormatter.FirstCharInWordsToUpper(Name)}, {StringFormatter.FirstCharInStringToUpper(Description)}.");
+            _description.Add($"{X.ToString("0000")}, {Y.ToString("0000")}");
+
+            foreach (Item item in _inventory.Items)
+            {
+                _description.Add($"- {StringFormatter.FirstCharInWordsToUpper(item.Name)} ({item.ItemType})");
+            }
+
+            return _description;
+        }
+
+        // Character Child class will draw it's own Name to the screen.
+        public abstract void DrawName();
+
+
+        public string Name { get { return _name; } }
+        public string Description { get { return _description; } }
+        public Inventory Inventory { get { return _inventory; } }
+        public Phrases Phrases { get { return _phrases; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    // Enumeration: Lists the Character child classes that this method can instantiate. 
+    public enum CharacterType
+    {
+        Villager,
+        Fish,
+        Duck,
+        Cow
+    }
+    public class CharacterFactory
+    {
+        private Navigator _navigator;
+        private Random _random = new Random();
+
+        // Constructor: 
+        public CharacterFactory(Navigator navigator)
+        {
+            _navigator = navigator;
+        }
+
+        // Returns a new Character of the CharacterType specified.
+        public Character Instantiate(CharacterType type)
+        {
+            Point2D _coords;
+
+            switch (type)
+            {
+                case CharacterType.Villager:
+                    string _name = ReadRandomLine("../../../Text/Names.txt");
+                    string _description = ReadRandomLine("../../../Text/Descriptions.txt");
+                    _coords = _navigator.RandomCoords(true, false);
+                    return new Villager(_name, _description, _coords);
+
+                case CharacterType.Fish:
+                    _coords = _navigator.RandomCoords(false, true);
+                    return new Fish(_coords);
+
+                case CharacterType.Duck:
+                    _coords = _navigator.RandomCoords(true, true);
+                    return new Duck(_coords);
+
+                case CharacterType.Cow:
+                    _coords = _navigator.RandomCoords(true, false);
+                    return new Cow(_coords);
+
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+
+        // Opens a file and returns a random line from it as a string.
+        private string ReadRandomLine(string fileLocation)
+        {
+            try
+            {
+                StreamReader _reader = new StreamReader(fileLocation);
+
+                int _lines = Convert.ToInt32(_reader.ReadLine());
+                int _line = _random.Next(0, _lines);
+
+                for (int i = 0; i < _line; i++) // Loop to skip over lines.
+                {
+                    _reader.ReadLine();
+                }
+
+                return _reader.ReadLine();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return " ";
+            }
+        }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class Villager : Character
+    {
+        // Constructor :
+        public Villager(string name, string description, Point2D coords) : base(name, description, coords, 8)
+        {
+
+        }
+
+        // Instance draws itself to the screen.
+        public override void Draw()
+        {
+            Color _color = ColorPalette.Instance().Current.Villager;
+            SplashKit.FillRectangle(_color, DrawX, DrawY, TileSize, TileSize);
+            DrawName();
+        }
+
+        // Instance draws it's Name to the screen next to itself.
+        public override void DrawName()
+        {
+            Color _color = ColorPalette.Instance().Current.TextSecondary;
+            SplashKit.DrawText(StringFormatter.FirstCharInWordsToUpper(Name), _color, DrawX + (TileSize * 1.5), DrawY);
+        }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public abstract class Animal : Character
+    {
+        public Animal(string name, string description, Point2D coords, int tileSize) : base(name, description, coords, tileSize) { }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class Cow : Animal
+    {
+        private Item _steak = new Item(ItemType.Food, "Steak", "Grilled to perfection");
+
+        // Constructor: 
+        public Cow(Point2D coords) : base("Cow", "Just a big ol' moo cow", coords, 10)
+        {
+            Inventory.Add(_steak);
+        }
+
+        // Instance draws itself to the screen.
+        public override void Draw()
+        {
+            Color _color = ColorPalette.Instance().Current.DarkBrown;
+            SplashKit.FillRectangle(_color, DrawX, DrawY, TileSize, TileSize / .66);
+        }
+
+        // Instance draws it's Name to the screen next to itself.
+        public override void DrawName()
+        {
+            Color _color = ColorPalette.Instance().Current.TextSecondary;
+            SplashKit.DrawText(StringFormatter.FirstCharInWordsToUpper(Name), _color, DrawX + (TileSize * 1.5), DrawY);
+        }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class Fish : Animal
+    {
+        private Item _sushi = new Item(ItemType.Food, "Sushi", "Seaweed, rice, fish");
+
+        public Fish(Point2D coords) : base("Fish", "The chicken of the sea", coords, 6)
+        {
+            Inventory.Add(_sushi);
+        }
+
+        // Instance draws itself to the screen.
+        public override void Draw()
+        {
+            Color _color = ColorPalette.Instance().Current.Orange;
+            SplashKit.FillRectangle(_color, DrawX, DrawY, TileSize, TileSize);
+        }
+
+        public override void DrawName()
+        {
+            Color _color = ColorPalette.Instance().Current.TextSecondary;
+            SplashKit.DrawText(StringFormatter.FirstCharInWordsToUpper(Name), _color, DrawX + (TileSize * 1.5), DrawY);
+        }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class Duck : Animal
+    {
+        private Item _duckBreast = new Item(ItemType.Food, "Duck Breast", "Tastes like chicken!");
+
+        // Constructor :
+        public Duck(Point2D coords) : base("Duck", "Quack", coords, 6)
+        {
+            Inventory.Add(_duckBreast);
+        }
+
+        // Instance draws itself to the screen.
+        public override void Draw()
+        {
+            Color _color = ColorPalette.Instance().Current.LightBrown;
+            SplashKit.FillRectangle(_color, DrawX, DrawY, TileSize, TileSize);
+        }
+
+        // Instance draws it's Name to the screen next to itself.
+        public override void DrawName()
+        {
+            Color _color = ColorPalette.Instance().Current.TextSecondary;
+            SplashKit.DrawText(StringFormatter.FirstCharInWordsToUpper(Name), _color, DrawX + (TileSize * 1.5), DrawY);
+        }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandManager : IUpdateEachCycle
+    {
+        private Navigator _cartographer;
+        private CharacterManager _characterManager;
+
+        private List<CommandInvoker> _utilityInvokers;
+        private List<CommandInvoker> _characterInvokers;
+
+        private ICommand _rotateCharacter;
+        private ICommand _togglePalette;
+        private ICommand _toggleDisplayAnimalNames;
+        private ICommand _moveDown;
+        private ICommand _moveUp;
+        private ICommand _moveLeft;
+        private ICommand _moveRight;
+        private ICommand _speakGreeting;
+        private ICommand _speakTakeItem;
+        private ICommand _speakGiveItem;
+        private ICommand _speakCapture;
+        private ICommand _giveItem;
+        private ICommand _takeItem;
+        private ICommand _capture;
+
+        private CommandInvoker _rKeyInvoker;
+        private CommandInvoker _tKeyInvoker;
+        private CommandInvoker _eKeyInvoker;
+        private CommandInvoker _downKeyInvoker;
+        private CommandInvoker _upKeyInvoker;
+        private CommandInvoker _leftKeyInvoker;
+        private CommandInvoker _rightKeyInvoker;
+        private CommandInvoker _shiftKeyInvoker;
+        private CommandInvoker _crtlKeyInvoker;
+        private CommandInvoker _spaceKeyInvoker;
+        private CommandInvoker _cKeyInvoker;
+
+        // Constructor: 
+        public CommandManager(Navigator cartographer, CharacterManager charcaterManager) 
+        {
+            _cartographer = cartographer;
+            _characterManager = charcaterManager;
+
+            _utilityInvokers = new List<CommandInvoker>();
+            SetUtilities();
+
+            _characterInvokers = new List<CommandInvoker>();
+            SetCharacter();
+        }
+
+        // Instantiate Command > Instantiate Invoker with Command > Add Invoker to List.
+        // These are the commands which are not specific to the current character, and do not need to be updated when the current charcater is changed.
+        // Clears the List at the start of the method to ensure no unwanted artifacts remain.
+        public void SetUtilities()
+        {
+            _utilityInvokers.Clear();
+
+            _rotateCharacter = new CommandRotateCharacter(_characterManager);
+            _rKeyInvoker = new CommandInvoker(_rotateCharacter, KeyCode.RKey);
+            _utilityInvokers.Add(_rKeyInvoker);
+
+            _togglePalette = new CommandTogglePalette();
+            _tKeyInvoker = new CommandInvoker(_togglePalette, KeyCode.TKey);
+            _utilityInvokers.Add(_tKeyInvoker);
+
+            _toggleDisplayAnimalNames = new CommandToggleDisplayAnimalNames(_characterManager);
+            _eKeyInvoker = new CommandInvoker(_toggleDisplayAnimalNames, KeyCode.EKey);
+            _utilityInvokers.Add(_eKeyInvoker);
+        }
+
+        // Instantiate Command > Instantiate Invoker with Command > Add Invoker to List.
+        // These are the commands which are specific to the current character, and do need to be updated when the current charcater is changed.
+        // Clears the List at the start of the method to ensure no unwanted artifacts remain.
+        public void SetCharacter()
+        {
+            _characterInvokers.Clear();
+            Character _character = _characterManager.CurrentCharacter;
+
+            _moveDown = new CommandMoveDown(_character, _cartographer);
+            _downKeyInvoker = new CommandInvoker(_moveDown, KeyCode.DownKey);
+            _characterInvokers.Add(_downKeyInvoker);
+
+            _moveUp = new CommandMoveUp(_character, _cartographer);
+            _upKeyInvoker = new CommandInvoker(_moveUp, KeyCode.UpKey);
+            _characterInvokers.Add(_upKeyInvoker);
+
+            _moveLeft = new CommandMoveLeft(_character, _cartographer);
+            _leftKeyInvoker = new CommandInvoker(_moveLeft, KeyCode.LeftKey);
+            _characterInvokers.Add(_leftKeyInvoker);
+
+            _moveRight = new CommandMoveRight(_character, _cartographer);
+            _rightKeyInvoker = new CommandInvoker(_moveRight, KeyCode.RightKey);
+            _characterInvokers.Add(_rightKeyInvoker);
+
+            _speakGreeting = new CommandSpeakGreeting(_character);
+            _shiftKeyInvoker = new CommandInvoker(_speakGreeting, KeyCode.LeftShiftKey);
+            _characterInvokers.Add(_shiftKeyInvoker);
+
+            _speakTakeItem = new CommandSpeakTakeItem(_character);
+            _takeItem = new CommandTakeItem();
+            _crtlKeyInvoker = new CommandInvoker(_speakTakeItem, _takeItem, KeyCode.LeftCtrlKey);
+            _characterInvokers.Add(_crtlKeyInvoker);
+
+            _speakGiveItem = new CommandSpeakGiveItem(_character);
+            _giveItem = new CommandGiveItem();
+            _spaceKeyInvoker = new CommandInvoker(_speakGiveItem, _giveItem, KeyCode.SpaceKey);
+            _characterInvokers.Add(_spaceKeyInvoker);
+
+            _speakCapture = new CommandSpeakCapture(_character);
+            _capture = new CommandCapture();
+            _cKeyInvoker = new CommandInvoker(_speakCapture, _capture, KeyCode.CKey);
+            _characterInvokers.Add(_cKeyInvoker);
+        }
+
+        // Implements IUpdateEachCycle interface by calling all the classes methods which need to update each gameplay cycle.
+        public void RunCycle()
+        {
+            try
+            {
+                SetCharacter();
+                Execute();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
+
+        // Calls each of the CommandInvoker objects to execute if their trigger has been invoked. 
+        public void Execute()
+        {
+            List<CommandInvoker> _invokers = _utilityInvokers.Concat(_characterInvokers).ToList();
+
+            foreach (CommandInvoker command in _invokers)
+            {
+                try
+                {
+                    command.Execute();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+            }
+        }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandInvoker
+    {
+        private ICommand _command;
+        private ICommand? _secondaryCommand;
+        private KeyCode _key;
+
+        // Constructor: Takes two ICommand objects.
+        public CommandInvoker(ICommand command, ICommand? secondaryCommand, KeyCode key)
+        {
+            _command = command;
+            _secondaryCommand = secondaryCommand;
+            _key = key;
+        }
+
+        // Constructor: Takes a single ICommand object.
+        public CommandInvoker(ICommand command, KeyCode key) : this(command, null, key) { }
+
+        // Sets a new ICommand to the primary command.
+        public void SetCommand(ICommand command)
+        {
+            _command = command;
+        }
+
+        // Sets a new ICommand to the secondary command.
+        public void SetSecondaryCommand(ICommand command)
+        {
+            _secondaryCommand = command;
+        }
+
+        // Sets a new trigger to invoke the ICommand/s.
+        public void SetTrigger(KeyCode key)
+        {
+            _key = key;
+        }
+
+        // Calls ExecuteCommand for the primary and secondary ICommand objects.
+        public void Execute()
+        {
+            ExecuteCommand(_command);
+            ExecuteCommand(_secondaryCommand);
+        }
+
+        // Calls the ICommand to Execute() if the trigger has been invoked.
+        // If the command is Continuous, SplashKit.KeyDown will invoke the command for each game cycle that it is invoked.
+        // If the command is !Continuous, SplashKit.KeyType will invoke the command once for each time the trigger is pressed.
+        private void ExecuteCommand(ICommand? command)
+        {
+            if (command != null)
+            {
+                if (command.Continuous && SplashKit.KeyDown(_key))
+                {
+                    command.Execute();
+                }
+
+                if (!command.Continuous && SplashKit.KeyTyped(_key))
+                {
+                    command.Execute();
+                }
+            }
+        }
+    }
+}
+
+
+namespace CustomProgram
+{
+    // Interface: Defines the Method and Parameter that each ICommand needs to provide.
+    public interface ICommand
+    {
+        // Execute the ICommand.
+        public void Execute();
+
+        // If True, ICommand executes for as long as the trigger is invoked.
+        // If Flase, ICommand executes only once eachtime the trigger is invoked.
+        public bool Continuous { get; }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandCapture : ICommand
+    {
+        private bool _continuos;
+
+        // Constructor: 
+        public CommandCapture()
+        {
+            _continuos = false;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        //
+        // Note: Code has not been implemented yet.
+        // Inention: Take an Item for a nearby Animal and remove the instance of the Animal. 
+        public void Execute()
+        {
+            throw new NotImplementedException("*Take Item from nearby Animal. Remove Animal instance.* (CommandCapture.Execute() is not implemented.)");
+        }
+
+        public bool Continuous { get { return _continuos; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandGiveItem : ICommand
+    {
+        private bool _continuos;
+
+        public CommandGiveItem() 
+        {
+            _continuos = false;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        //
+        // Note: Code has not been implemented yet.
+        // Intention: Transfer an Item from the Character's Inventory and a nearby Character's Inventory. Transfers an ItemType.Food Item first, if available.
+        public void Execute()
+        {
+            throw new NotImplementedException("*Give Item to Nearby Character* (CommandGiveItem.Execute() is not implemented.)");
+        }
+
+        public bool Continuous { get { return _continuos; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandMoveDown : ICommand
+    {
+        private Character _character;
+        private Navigator _navigator;
+        private bool _continuous;
+
+        // COnstructor: 
+        public CommandMoveDown(Character character, Navigator navigator)
+        {
+            _character = character;
+            _navigator = navigator;
+            _continuous = true;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        public void Execute()
+        {
+            if (CanMoveOntoTile())
+            {
+                _character.Y += 1;
+            }
+        }
+
+        // Based on the underlying Tile in Map, determines if the Character can move in this direction or not.
+        private bool CanMoveOntoTile()
+        {
+            if (_character.Y < _navigator.MapHeight)
+            {
+                Point2D _proposedCoords = new Point2D { X = _character.X, Y = _character.Y + 1 };
+                bool _hasSwimWear = _character.Inventory.HasItemOfType(ItemType.SwimWear);
+
+                if (_navigator.CanBeOnTile(_proposedCoords, true, _hasSwimWear))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool Continuous { get { return _continuous; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandMoveLeft : ICommand
+    {
+        private Character _character;
+        private Navigator _cartographer;
+        private bool _continuous;
+
+        // Constructor: 
+        public CommandMoveLeft(Character character, Navigator cartographer)
+        {
+            _character = character;
+            _cartographer = cartographer;
+            _continuous = true;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        public void Execute()
+        {
+            if (CanMoveOntoTile())
+            {
+                _character.X -= 1;
+            }
+        }
+
+        // Based on the underlying Tile in Map, determines if the Character can move in this direction or not.
+        private bool CanMoveOntoTile()
+        {
+            if (_character.X > 0)
+            {
+                Point2D _proposedCoords = new Point2D { X = _character.X - 1, Y = _character.Y };
+                bool _hasSwimWear = _character.Inventory.HasItemOfType(ItemType.SwimWear);
+
+                if (_cartographer.CanBeOnTile(_proposedCoords, true, _hasSwimWear))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool Continuous { get { return _continuous; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandMoveRight : ICommand
+    {
+        private Character _character;
+        private Navigator _cartographer;
+        private bool _continuous;
+
+        // Constructor: 
+        public CommandMoveRight(Character character, Navigator cartographer)
+        {
+            _character = character;
+            _cartographer = cartographer;
+            _continuous = true;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        public void Execute()
+        {
+            if (CanMoveOntoTile())
+            {
+                _character.X += 1;
+            }
+        }
+
+        // Based on the underlying Tile in Map, determines if the Character can move in this direction or not.
+        private bool CanMoveOntoTile()
+        {
+            if (_character.X < _cartographer.MapWidth)
+            {
+                Point2D _proposedCoords = new Point2D { X = _character.X + 1, Y = _character.Y };
+                bool _hasSwimWear = _character.Inventory.HasItemOfType(ItemType.SwimWear);
+
+                if (_cartographer.CanBeOnTile(_proposedCoords, true, _hasSwimWear))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool Continuous { get { return _continuous; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandMoveUp : ICommand
+    {
+        private Character _character;
+        private Navigator _cartographer;
+        private bool _continuous;
+
+        // Constructor: 
+        public CommandMoveUp(Character character, Navigator cartographer)
+        {
+            _character = character;
+            _cartographer = cartographer;
+            _continuous = true;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        public void Execute()
+        {
+            if (CanMoveOntoTile())
+            { 
+                _character.Y -= 1;
+            }
+        }
+
+        // Based on the underlying Tile in Map, determines if the Character can move in this direction or not.
+        private bool CanMoveOntoTile()
+        {
+            if (_character.Y > 0)
+            {
+                Point2D _proposedCoords = new Point2D { X = _character.X, Y = _character.Y - 1 };
+                bool _hasSwimWear = _character.Inventory.HasItemOfType(ItemType.SwimWear);
+
+                return _cartographer.CanBeOnTile(_proposedCoords, true, _hasSwimWear);
+            }
+            return false;
+        }
+
+        public bool Continuous { get { return _continuous; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandRotateCharacter : ICommand
+    {
+        private CharacterManager _characterManager;
+        private bool _continuous;
+
+        // Constructor: 
+        public CommandRotateCharacter(CharacterManager characterManager) 
+        {
+            _characterManager = characterManager;
+            _continuous = false;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        public void Execute()
+        {
+            _characterManager.RotateCharacter();
+        }
+
+        public bool Continuous { get { return _continuous; } }
+
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandSpeakCapture : ICommand
+    {
+        private Character _character;
+
+        private bool _continuous;
+
+        // Constructor: 
+        public CommandSpeakCapture(Character character)
+        {
+            _character = character;
+            _continuous = true;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        // Draws the Phrase to the screen above the Character.
+        public void Execute()
+        {
+            double _x = _character.X + (_character.TileSize / 2);
+            double _y = _character.Y - 20;
+            string _string = _character.Phrases.Retrieve(PhraseKey.Capture);
+            Color _color = ColorPalette.Instance().Current.TextSecondary;
+
+            SplashKit.DrawText(_string, _color, _x, _y);
+        }
+
+        public bool Continuous { get { return _continuous; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandSpeakGiveItem : ICommand
+    {
+        private Character _character;
+
+        private bool _continuous;
+
+        // Constructor: 
+        public CommandSpeakGiveItem(Character character)
+        {
+            _character = character;
+            _continuous = true;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        // Draws the Phrase to the screen above the Character.
+        public void Execute()
+        {
+            double _x = _character.X + (_character.TileSize / 2);
+            double _y = _character.Y - 20;
+            string _string = _character.Phrases.Retrieve(PhraseKey.GiveItem);
+            Color _color = ColorPalette.Instance().Current.TextSecondary;
+
+            SplashKit.DrawText(_string, _color, _x, _y);
+        }
+
+        public bool Continuous { get { return _continuous; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandSpeakGreeting : ICommand
+    {
+        private Character _character;
+
+        private bool _continuous;
+
+        // COnstructor: 
+        public CommandSpeakGreeting(Character character)
+        {
+            _character = character;
+            _continuous = true;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        // Draws the Phrase to the screen above the Character.
+        public void Execute()
+        {
+            double _x = _character.X + (_character.TileSize / 2);
+            double _y = _character.Y - 20;
+            string _string = _character.Phrases.Retrieve(PhraseKey.Greeting);
+            Color _color = ColorPalette.Instance().Current.TextSecondary;
+
+            SplashKit.DrawText(_string, _color, _x, _y);
+        }
+
+        public bool Continuous { get { return _continuous; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandSpeakTakeItem : ICommand
+    {
+        private Character _character;
+
+        private bool _continuous;
+
+        // Constructor: 
+        public CommandSpeakTakeItem(Character character)
+        {
+            _character = character;
+            _continuous = true;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        // Draws the Phrase to the screen above the Character.
+        public void Execute()
+        {
+            double _x = _character.X + (_character.TileSize / 2);
+            double _y = _character.Y - 20;
+            string _string = _character.Phrases.Retrieve(PhraseKey.TakeItem);
+            Color _color = ColorPalette.Instance().Current.TextSecondary;
+
+            SplashKit.DrawText(_string, _color, _x, _y);
+        }
+
+        public bool Continuous { get { return _continuous; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandTakeItem : ICommand
+    {
+        private bool _continuos;
+        public CommandTakeItem()
+        {
+            _continuos = false;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        //
+        // Note: Code has not been implemented yet.
+        // Inention: Take an Item for a nearby Villager's Inventory. 
+        public void Execute()
+        {
+            throw new NotImplementedException("*Take Item from nearby Villager* (CommandTakeItem.Execute() is not implemented.)");
+        }
+
+        public bool Continuous { get { return _continuos; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandToggleDisplayAnimalNames : ICommand
+    {
+        CharacterManager _characterManager;
+        private bool _continuous;
+
+        // Constructor: 
+        public CommandToggleDisplayAnimalNames(CharacterManager characterManager)
+        {
+            _characterManager = characterManager;
+            _continuous = false;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+        public void Execute()
+        {
+            _characterManager.ToggleDisplayAnimalNames();
+        }
+
+        public bool Continuous { get { return _continuous; } }
+
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class CommandTogglePalette : ICommand
+    {
+        private bool _continuous;
+
+        // Constructor: 
+        public CommandTogglePalette()
+        {
+            _continuous = false;
+        }
+
+        // Implements ICommand interface by implementing the code that should occur when the command is invoked.
+
+        public void Execute()
+        {
+            ColorPalette.Instance().Rotate();
+        }
+
+        public bool Continuous { get { return _continuous; } }
+    }
+}
+
+
+namespace CustomProgram
+{
+    public class StringFormatter
+    {
+        // Converts the first Char in a string to UpperCase, and all remaining characters to LowerCase.
+        public static string FirstCharInStringToUpper(string s)
+        {
+            if (string.IsNullOrEmpty(s))
+            {
+                throw new ArgumentNullException("s");
+            }
+
+            char[] _array = s.ToLower().ToCharArray();
+            _array[0] = char.ToUpper(_array[0]);
+
+            return new string(_array);
+        }
+
+        // Converts the first Char in each word in a string to UpperCase, and all remaining characters to LowerCase.
+        public static string FirstCharInWordsToUpper(string s)
+        {
+            List<string> _array = s.Split(' ').ToList();
+            string _returnString = string.Empty;
+
+            int index = 0;
+            foreach (string word in _array)
+            {
+                _returnString += FirstCharInStringToUpper(word);
+
+                if (index < _array.Count - 1)
+                {
+                    _returnString += ' ';
+                }
+            }
+            return _returnString;
+        }
+    }
+}
+
+
+namespace CustomProgram
+{
+    //
+    // Note: Unresolved issues with CharacterManager CurrentCharacter mean that Class has not been implemented yet.
+    // Class to be used as a utility to allow for interactions between characters.
+    // E.g., Allows Commands such as CommandGiveItem to work.
+    //
+
+    public class DetectNearby
+    {
+        private static DetectNearby? _instance;
+        private int _distance = 30;
+
+        // Private Constructor :
+        private DetectNearby()
+        {
+
+        }
+
+        // Singleton Class. Provides access to the instance.
+        public static DetectNearby Instance()
+        {
+            if (_instance == null)
+            {
+                _instance = new DetectNearby();
+            }
+            return _instance;
+        }
+
+        // Returns True if Charcater a and Character b are within _distance of eachother. Otherwise, returns false.
+        private bool IsClose(Character a, Character b)
+        {
+            if (a.X <= b.X + _distance && a.X >= b.X - _distance)
+            {
+                if (a.Y <= b.Y + _distance && a.Y >= b.Y - _distance)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Returns true if the Charcater is within _distance of any Character's from the List.
+        public bool AmICloseToAnyCharacter(Character character, List<Character> characters)
+        {
+            List<Character> _checkableCharacters = characters;
+            _checkableCharacters.Remove(character);
+
+            foreach (Character checkCharacter in _checkableCharacters)
+            {
+                if (IsClose(character, checkCharacter))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Returns the Character the the specified Character is closest too. 
+        // Returns False if no Characters are within _distance.
+        public Character? WhichCharacterAmICloseTo(Character character, List<Character> characters)
+        {
+            List<Character> _checkableCharacters = characters;
+            _checkableCharacters.Remove(character);
+
+            List<Character> _nearbyCharcaters = new List<Character>();
+
+            foreach (Character checkCharacter in _nearbyCharcaters)
+            {
+                if (IsClose(character, checkCharacter))
+                {
+                    _nearbyCharcaters.Add(checkCharacter);
+                }
+            }
+
+            switch (_nearbyCharcaters.Count)
+            {
+                case 0:
+                    return null;
+
+                case 1:
+                    return _nearbyCharcaters[0];
+
+                default:
+                    List<double> _displacements = new List<double>();
+
+                    foreach (Character checkCharacter in _nearbyCharcaters)
+                    {
+                        _displacements.Add(Displacement(character, checkCharacter));
+                    }
+
+                    int i = _displacements.IndexOf(_displacements.Max());
+                    return _nearbyCharcaters[i];
+            }
+        }
+
+        // Calculates the Displacement of Character a from Character b by adding the absolute distance between the X and Y of the Coords of each Character.
+        private double Displacement(Character a, Character b)
+        {
+            double _displacement = 0;
+            _displacement += Math.Abs(a.X - b.X);
+            _displacement += Math.Abs(a.Y - b.Y);
+            return _displacement;
+        }
+    }
+}
+
+
+namespace CustomProgram
+{
+    //
+    // Note: Unresolved issues with CharacterManager CurrentCharacter mean that Class has not been implemented yet.
+    // Class to be used as a utility to allow for interactions between characters.
+    // E.g., Allows Commands such as CommandGiveItem to work.
+    //
+
+    public class PhraseManager : IUpdateEachCycle
+    {
+        private CharacterManager _characterManager;
+
+        // Constructor :
+        public PhraseManager(CharacterManager characterManager) 
+        {
+            _characterManager = characterManager;
+        }
+
+        // Implements IUpdateEachCycle interface by calling all the classes methods which need to update each gameplay cycle.
+        public void RunCycle()
+        {
+            SetPhrases();
+        }
+
+        // Set's the Phrases for all Characters. 
+        // Phrases are updated each game to reflect changes in which Character's are nearby, and Item's in Inventories.
+        // Phrases for not current characters are set to Defaults.
+        public void SetPhrases()
+        {
+ 
+            foreach (Character character in _characterManager.PlayableCharacters)
+            {
+                character.Phrases.SetDefault();
+
+            }
+            
+            Character _current = _characterManager.CurrentCharacter;
+            List<Character> _allCharacters = _characterManager.AllCharcaters;
+            Character? _nearby = DetectNearby.Instance().WhichCharacterAmICloseTo(_current, _allCharacters);
+
+            _current.Phrases.SetPhrases(_current, _nearby);
+        }
+    }
+}
+
+
+namespace CustomProgram
+{
+    // Enumeration: Available PhraseKeys to access Phrases from the Dictionary.
+    public enum PhraseKey
+    {
+        Greeting,
+        Capture,
+        TakeItem,
+        GiveItem
+    }
+    public class Phrases
+    {
+        private string _defaultGreeting = "Hi There!";
+        private string _defaultCapture = "Gotcha!";
+        private string _defaultTakeItem = "Can I have that?";
+        private string _defaultGiveItem = "Please, take this!";
+
+        private Dictionary<PhraseKey, string> _phrases = new Dictionary<PhraseKey, string>();
+
+        // Constructor :
+        public Phrases()
+        {
+            SetDefault();
+        }
+
+        // Sets each Phrase in the Dictionary to a default string.
+        public void SetDefault()
+        {
+            _phrases.Clear();
+            _phrases.Add(PhraseKey.Greeting, _defaultGreeting);
+            _phrases.Add(PhraseKey.Capture, _defaultCapture);
+            _phrases.Add(PhraseKey.TakeItem, _defaultTakeItem);
+            _phrases.Add(PhraseKey.GiveItem, _defaultGiveItem);
+        }
+
+        // Sets each phrase in the dictionary to a dynamic string.
+        public void SetPhrases(Character character, Character? nearby)
+        {
+            _phrases.Clear();
+            _phrases.Add(PhraseKey.Greeting, SetGreeting(nearby));
+            _phrases.Add(PhraseKey.Capture, SetCapture(nearby));
+            _phrases.Add(PhraseKey.TakeItem, SetTakeItem(nearby));
+            _phrases.Add(PhraseKey.GiveItem, SetGiveItem(character, nearby));
+        }
+
+        // Set the Greeting Phrase based on nearby Character.
+        private string SetGreeting(Character? nearby)
+        {
+            if (nearby != null)
+            {
+                return $"Hi There, {StringFormatter.FirstCharInStringToUpper(nearby.Name)}!";
+            }
+            return _defaultGreeting;
+        }
+
+        // Set the Captrue Phrase based on nearby Character.
+        private string SetCapture(Character? nearby)
+        {
+            if (nearby != null)
+            {
+                if (nearby is Animal)
+                {
+                    return $"Gotcha, {StringFormatter.FirstCharInStringToUpper(nearby.Name)}!";
+                }
+                return $"Sorry about that, {StringFormatter.FirstCharInStringToUpper(nearby.Name)}";
+
+            }
+            return _defaultCapture;
+        }
+
+        // Set the TakeItem Phrase based on Nearby Character.
+        private string SetTakeItem(Character? nearby)
+        {
+            if (nearby != null)
+            {
+                if (nearby is Animal)
+                {
+                    return $"Come here, {StringFormatter.FirstCharInStringToUpper(nearby.Name)}!";
+                }
+                if (nearby is Villager)
+                {
+                    if (nearby.Inventory.Items.Count > 0)
+                    {
+                        return $"Thanks for the {StringFormatter.FirstCharInStringToUpper(nearby.Inventory.Items.First().Name)}";
+                    }
+                    else
+                    {
+                        return "Can I borrow some money?";
+                    }
+                }
+            }
+            return _defaultTakeItem;
+        }
+
+        // Set the GiveItem Phrase based on Inventory and nearby Character.
+        private string SetGiveItem(Character character, Character? nearby)
+        {
+            if (!character.Inventory.HasItemOfType(ItemType.Food))
+            {
+            return "I wish I had some food to share";
+            }
+
+            if (nearby != null)
+            {
+                if (nearby is Villager)
+                {
+                    return $"Please take some food";
+                }
+            }
+            return "Who can I share all this food with?";
+        }
+
+        // Retrieve the Phrase at the PhraseKey.
+        public string Retrieve(PhraseKey key)
+        {
+            if (_phrases != null)
+            {
+                return _phrases[key];
+            }
+            return "error retrieveing phrase";
+        }
+    }
+}
