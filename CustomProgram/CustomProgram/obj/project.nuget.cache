@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "e8uFoDdlpSYhZQ59pu47+4JfE8s12Sbew5XttymbFR1AIq8TLt6UtW/c/Ew5sg1Y/R+3Dl49fZKB8VucCjuQYA==",
+  "dgSpecHash": "ichvQQ82vPNQniKJMAP1CgZ2jFe1p3SyVn0ulzBAkGWXr0kt4CIY3AmJF5qhzUHemyzjKYLBZXiYqF5fSS5slQ==",
   "success": true,
-  "projectFilePath": "C:\\Users\\matth\\source\\repos\\MatthewLeigh\\Cos20007\\Week06\\6.4D_CustomProjectD_Program\\CustomProgram\\CustomProgram\\CustomProgram.csproj",
+  "projectFilePath": "C:\\Users\\matth\\source\\repos\\MatthewLeigh\\CustomProgram\\CustomProgram\\CustomProgram\\CustomProgram.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\matth\\.nuget\\packages\\simplexnoise\\2.0.0\\simplexnoise.2.0.0.nupkg.sha512"
   ],

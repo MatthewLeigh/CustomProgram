@@ -45,11 +45,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\matth\\source\\repos\\MatthewLeigh\\Cos20007\\Week06\\6.4D_CustomProjectD_Program\\CustomProgram\\CustomProgram\\CustomProgram.csproj",
+      "projectUniqueName": "C:\\Users\\matth\\source\\repos\\MatthewLeigh\\CustomProgram\\CustomProgram\\CustomProgram\\CustomProgram.csproj",
       "projectName": "CustomProgram",
-      "projectPath": "C:\\Users\\matth\\source\\repos\\MatthewLeigh\\Cos20007\\Week06\\6.4D_CustomProjectD_Program\\CustomProgram\\CustomProgram\\CustomProgram.csproj",
+      "projectPath": "C:\\Users\\matth\\source\\repos\\MatthewLeigh\\CustomProgram\\CustomProgram\\CustomProgram\\CustomProgram.csproj",
       "packagesPath": "C:\\Users\\matth\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\matth\\source\\repos\\MatthewLeigh\\Cos20007\\Week06\\6.4D_CustomProjectD_Program\\CustomProgram\\CustomProgram\\obj\\",
+      "outputPath": "C:\\Users\\matth\\source\\repos\\MatthewLeigh\\CustomProgram\\CustomProgram\\CustomProgram\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\matth\\AppData\\Roaming\\NuGet\\NuGet.Config",

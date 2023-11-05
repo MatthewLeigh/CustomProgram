@@ -2,7 +2,7 @@
 {
     public class CommandManager : IUpdateEachCycle
     {
-        private Navigator _cartographer;
+        private Navigator _navigator;
         private CharacterManager _characterManager;
 
         private List<CommandInvoker> _utilityInvokers;
@@ -36,9 +36,9 @@
         private CommandInvoker _cKeyInvoker;
 
         // Constructor: 
-        public CommandManager(Navigator cartographer, CharacterManager charcaterManager) 
+        public CommandManager(Navigator navigator, CharacterManager charcaterManager) 
         {
-            _cartographer = cartographer;
+            _navigator = navigator;
             _characterManager = charcaterManager;
 
             _utilityInvokers = new List<CommandInvoker>();
@@ -76,19 +76,19 @@
             _characterInvokers.Clear();
             Character _character = _characterManager.CurrentCharacter;
 
-            _moveDown = new CommandMoveDown(_character, _cartographer);
+            _moveDown = new CommandMoveDown(_character, _navigator);
             _downKeyInvoker = new CommandInvoker(_moveDown, KeyCode.DownKey);
             _characterInvokers.Add(_downKeyInvoker);
 
-            _moveUp = new CommandMoveUp(_character, _cartographer);
+            _moveUp = new CommandMoveUp(_character, _navigator);
             _upKeyInvoker = new CommandInvoker(_moveUp, KeyCode.UpKey);
             _characterInvokers.Add(_upKeyInvoker);
 
-            _moveLeft = new CommandMoveLeft(_character, _cartographer);
+            _moveLeft = new CommandMoveLeft(_character, _navigator);
             _leftKeyInvoker = new CommandInvoker(_moveLeft, KeyCode.LeftKey);
             _characterInvokers.Add(_leftKeyInvoker);
 
-            _moveRight = new CommandMoveRight(_character, _cartographer);
+            _moveRight = new CommandMoveRight(_character, _navigator);
             _rightKeyInvoker = new CommandInvoker(_moveRight, KeyCode.RightKey);
             _characterInvokers.Add(_rightKeyInvoker);
 

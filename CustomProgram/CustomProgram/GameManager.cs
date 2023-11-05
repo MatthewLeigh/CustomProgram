@@ -9,7 +9,7 @@
 
         private Map _map;
         private Window _window;
-        private Navigator _cartographer;
+        private Navigator _navigator;
         private CharacterManager _characterMangaer;
         private CommandManager _commandManager;
         // private PhraseManager _phraseManager; // To Be Implemented.
@@ -27,9 +27,9 @@
             _map = new Map(_numTilesX, _numTilesY, _tileSize);
             _window = new Window(_gameName, _map.Width, _map.Height);
 
-            _cartographer = new Navigator(_map);
-            _characterMangaer = new CharacterManager(_cartographer);
-            _commandManager = new CommandManager(_cartographer, _characterMangaer);
+            _navigator = new Navigator(_map);
+            _characterMangaer = new CharacterManager(_navigator);
+            _commandManager = new CommandManager(_navigator, _characterMangaer);
             // _phraseManager = new PhraseManager(_characterMangaer); // To Be Implemented.
 
             _updatesEachCycle = new List<IUpdateEachCycle> { _map, _characterMangaer, _commandManager, }; // _phraseManager // To Be Implemented.

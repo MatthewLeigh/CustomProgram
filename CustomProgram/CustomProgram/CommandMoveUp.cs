@@ -3,14 +3,14 @@
     public class CommandMoveUp : ICommand
     {
         private Character _character;
-        private Navigator _cartographer;
+        private Navigator _navigator;
         private bool _continuous;
 
         // Constructor: 
-        public CommandMoveUp(Character character, Navigator cartographer)
+        public CommandMoveUp(Character character, Navigator navigator)
         {
             _character = character;
-            _cartographer = cartographer;
+            _navigator = navigator;
             _continuous = true;
         }
 
@@ -31,7 +31,7 @@
                 Point2D _proposedCoords = new Point2D { X = _character.X, Y = _character.Y - 1 };
                 bool _hasSwimWear = _character.Inventory.HasItemOfType(ItemType.SwimWear);
 
-                return _cartographer.CanBeOnTile(_proposedCoords, true, _hasSwimWear);
+                return _navigator.CanBeOnTile(_proposedCoords, true, _hasSwimWear);
             }
             return false;
         }
