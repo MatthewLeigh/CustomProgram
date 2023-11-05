@@ -52,10 +52,10 @@
         // Opens a file and returns a random line from it as a string.
         private string ReadRandomLine(string fileLocation)
         {
+            StreamReader _reader = new StreamReader(fileLocation);
+
             try
             {
-                StreamReader _reader = new StreamReader(fileLocation);
-
                 int _lines = Convert.ToInt32(_reader.ReadLine());
                 int _line = _random.Next(0, _lines);
 
@@ -70,6 +70,10 @@
             {
                 Console.WriteLine(e.Message);
                 return " ";
+            }
+            finally
+            {
+                _reader.Close();
             }
         }
     }

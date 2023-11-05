@@ -2,7 +2,6 @@
 // Code also available on github:
 // https://github.com/MatthewLeigh/CustomProgram/tree/main/CustomProgram/CustomProgram
 //
-
 global using System;
 global using System.Collections.Generic;
 global using System.Linq;
@@ -36,6 +35,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public interface IUpdateEachCycle
@@ -44,6 +44,7 @@ namespace CustomProgram
         public void RunCycle();
     } 
 }
+
 
 
 namespace CustomProgram
@@ -57,7 +58,7 @@ namespace CustomProgram
 
         private Map _map;
         private Window _window;
-        private Navigator _cartographer;
+        private Navigator _navigator;
         private CharacterManager _characterMangaer;
         private CommandManager _commandManager;
         // private PhraseManager _phraseManager; // To Be Implemented.
@@ -75,9 +76,9 @@ namespace CustomProgram
             _map = new Map(_numTilesX, _numTilesY, _tileSize);
             _window = new Window(_gameName, _map.Width, _map.Height);
 
-            _cartographer = new Navigator(_map);
-            _characterMangaer = new CharacterManager(_cartographer);
-            _commandManager = new CommandManager(_cartographer, _characterMangaer);
+            _navigator = new Navigator(_map);
+            _characterMangaer = new CharacterManager(_navigator);
+            _commandManager = new CommandManager(_navigator, _characterMangaer);
             // _phraseManager = new PhraseManager(_characterMangaer); // To Be Implemented.
 
             _updatesEachCycle = new List<IUpdateEachCycle> { _map, _characterMangaer, _commandManager, }; // _phraseManager // To Be Implemented.
@@ -105,6 +106,7 @@ namespace CustomProgram
         public Window GameWindow { get { return _window; } }
     }
 }
+
 
 
 namespace CustomProgram
@@ -161,6 +163,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     // Interface: Defines the Color parameters that each IColorPalette needs to provide.
@@ -180,6 +183,7 @@ namespace CustomProgram
         public Color Invalid { get; }
     }
 }
+
 
 
 namespace CustomProgram
@@ -215,6 +219,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public class Bold : IColorPalette
@@ -246,6 +251,7 @@ namespace CustomProgram
         public Color Invalid { get { return _invalid; } }
     }
 }
+
 
 
 namespace CustomProgram
@@ -376,6 +382,7 @@ namespace CustomProgram
         public List<int> TilesYList { get { return _tilesYList; } }
     }
 }
+
 
 
 namespace CustomProgram
@@ -564,6 +571,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     // Enumeration: TileType can be thought of in terms of layers of elevation. The greater the enumerable value, the higher the elevation of the tile.     
@@ -676,6 +684,7 @@ namespace CustomProgram
 }
 
 
+
 using SimplexNoise;
 
 namespace CustomProgram
@@ -708,6 +717,7 @@ namespace CustomProgram
         public float[,] Matrix { get { return _matrix; } }
     }
 }
+
 
 
 namespace CustomProgram
@@ -804,6 +814,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     // Enumeration: ItemType impacts how an Item is used within the game.
@@ -834,6 +845,7 @@ namespace CustomProgram
         public string Description { get { return _description; } }
     }
 }
+
 
 
 namespace CustomProgram
@@ -870,6 +882,7 @@ namespace CustomProgram
         public int TileSize { get { return _tileSize; } }
     }
 }
+
 
 
 namespace CustomProgram
@@ -1038,6 +1051,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public class InitialiseCharacterItems
@@ -1102,6 +1116,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public abstract class Character : DrawableObject
@@ -1146,6 +1161,7 @@ namespace CustomProgram
         public Phrases Phrases { get { return _phrases; } }
     }
 }
+
 
 
 namespace CustomProgram
@@ -1202,10 +1218,10 @@ namespace CustomProgram
         // Opens a file and returns a random line from it as a string.
         private string ReadRandomLine(string fileLocation)
         {
+            StreamReader _reader = new StreamReader(fileLocation);
+
             try
             {
-                StreamReader _reader = new StreamReader(fileLocation);
-
                 int _lines = Convert.ToInt32(_reader.ReadLine());
                 int _line = _random.Next(0, _lines);
 
@@ -1221,9 +1237,14 @@ namespace CustomProgram
                 Console.WriteLine(e.Message);
                 return " ";
             }
+            finally
+            {
+                _reader.Close();
+            }
         }
     }
 }
+
 
 
 namespace CustomProgram
@@ -1254,6 +1275,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public abstract class Animal : Character
@@ -1261,6 +1283,7 @@ namespace CustomProgram
         public Animal(string name, string description, Point2D coords, int tileSize) : base(name, description, coords, tileSize) { }
     }
 }
+
 
 
 namespace CustomProgram
@@ -1292,6 +1315,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public class Fish : Animal
@@ -1317,6 +1341,7 @@ namespace CustomProgram
         }
     }
 }
+
 
 
 namespace CustomProgram
@@ -1348,11 +1373,12 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public class CommandManager : IUpdateEachCycle
     {
-        private Navigator _cartographer;
+        private Navigator _navigator;
         private CharacterManager _characterManager;
 
         private List<CommandInvoker> _utilityInvokers;
@@ -1386,9 +1412,9 @@ namespace CustomProgram
         private CommandInvoker _cKeyInvoker;
 
         // Constructor: 
-        public CommandManager(Navigator cartographer, CharacterManager charcaterManager) 
+        public CommandManager(Navigator navigator, CharacterManager charcaterManager) 
         {
-            _cartographer = cartographer;
+            _navigator = navigator;
             _characterManager = charcaterManager;
 
             _utilityInvokers = new List<CommandInvoker>();
@@ -1426,19 +1452,19 @@ namespace CustomProgram
             _characterInvokers.Clear();
             Character _character = _characterManager.CurrentCharacter;
 
-            _moveDown = new CommandMoveDown(_character, _cartographer);
+            _moveDown = new CommandMoveDown(_character, _navigator);
             _downKeyInvoker = new CommandInvoker(_moveDown, KeyCode.DownKey);
             _characterInvokers.Add(_downKeyInvoker);
 
-            _moveUp = new CommandMoveUp(_character, _cartographer);
+            _moveUp = new CommandMoveUp(_character, _navigator);
             _upKeyInvoker = new CommandInvoker(_moveUp, KeyCode.UpKey);
             _characterInvokers.Add(_upKeyInvoker);
 
-            _moveLeft = new CommandMoveLeft(_character, _cartographer);
+            _moveLeft = new CommandMoveLeft(_character, _navigator);
             _leftKeyInvoker = new CommandInvoker(_moveLeft, KeyCode.LeftKey);
             _characterInvokers.Add(_leftKeyInvoker);
 
-            _moveRight = new CommandMoveRight(_character, _cartographer);
+            _moveRight = new CommandMoveRight(_character, _navigator);
             _rightKeyInvoker = new CommandInvoker(_moveRight, KeyCode.RightKey);
             _characterInvokers.Add(_rightKeyInvoker);
 
@@ -1495,6 +1521,7 @@ namespace CustomProgram
         }
     }
 }
+
 
 
 namespace CustomProgram
@@ -1563,6 +1590,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     // Interface: Defines the Method and Parameter that each ICommand needs to provide.
@@ -1576,6 +1604,7 @@ namespace CustomProgram
         public bool Continuous { get; }
     }
 }
+
 
 
 namespace CustomProgram
@@ -1604,6 +1633,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public class CommandGiveItem : ICommand
@@ -1627,6 +1657,7 @@ namespace CustomProgram
         public bool Continuous { get { return _continuos; } }
     }
 }
+
 
 
 namespace CustomProgram
@@ -1675,19 +1706,20 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public class CommandMoveLeft : ICommand
     {
         private Character _character;
-        private Navigator _cartographer;
+        private Navigator _navigator;
         private bool _continuous;
 
         // Constructor: 
-        public CommandMoveLeft(Character character, Navigator cartographer)
+        public CommandMoveLeft(Character character, Navigator navigator)
         {
             _character = character;
-            _cartographer = cartographer;
+            _navigator = navigator;
             _continuous = true;
         }
 
@@ -1708,7 +1740,7 @@ namespace CustomProgram
                 Point2D _proposedCoords = new Point2D { X = _character.X - 1, Y = _character.Y };
                 bool _hasSwimWear = _character.Inventory.HasItemOfType(ItemType.SwimWear);
 
-                if (_cartographer.CanBeOnTile(_proposedCoords, true, _hasSwimWear))
+                if (_navigator.CanBeOnTile(_proposedCoords, true, _hasSwimWear))
                 {
                     return true;
                 }
@@ -1721,19 +1753,20 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public class CommandMoveRight : ICommand
     {
         private Character _character;
-        private Navigator _cartographer;
+        private Navigator _navigator;
         private bool _continuous;
 
         // Constructor: 
-        public CommandMoveRight(Character character, Navigator cartographer)
+        public CommandMoveRight(Character character, Navigator navigator)
         {
             _character = character;
-            _cartographer = cartographer;
+            _navigator = navigator;
             _continuous = true;
         }
 
@@ -1749,12 +1782,12 @@ namespace CustomProgram
         // Based on the underlying Tile in Map, determines if the Character can move in this direction or not.
         private bool CanMoveOntoTile()
         {
-            if (_character.X < _cartographer.MapWidth)
+            if (_character.X < _navigator.MapWidth)
             {
                 Point2D _proposedCoords = new Point2D { X = _character.X + 1, Y = _character.Y };
                 bool _hasSwimWear = _character.Inventory.HasItemOfType(ItemType.SwimWear);
 
-                if (_cartographer.CanBeOnTile(_proposedCoords, true, _hasSwimWear))
+                if (_navigator.CanBeOnTile(_proposedCoords, true, _hasSwimWear))
                 {
                     return true;
                 }
@@ -1767,19 +1800,20 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public class CommandMoveUp : ICommand
     {
         private Character _character;
-        private Navigator _cartographer;
+        private Navigator _navigator;
         private bool _continuous;
 
         // Constructor: 
-        public CommandMoveUp(Character character, Navigator cartographer)
+        public CommandMoveUp(Character character, Navigator navigator)
         {
             _character = character;
-            _cartographer = cartographer;
+            _navigator = navigator;
             _continuous = true;
         }
 
@@ -1800,7 +1834,7 @@ namespace CustomProgram
                 Point2D _proposedCoords = new Point2D { X = _character.X, Y = _character.Y - 1 };
                 bool _hasSwimWear = _character.Inventory.HasItemOfType(ItemType.SwimWear);
 
-                return _cartographer.CanBeOnTile(_proposedCoords, true, _hasSwimWear);
+                return _navigator.CanBeOnTile(_proposedCoords, true, _hasSwimWear);
             }
             return false;
         }
@@ -1808,6 +1842,7 @@ namespace CustomProgram
         public bool Continuous { get { return _continuous; } }
     }
 }
+
 
 
 namespace CustomProgram
@@ -1834,6 +1869,7 @@ namespace CustomProgram
 
     }
 }
+
 
 
 namespace CustomProgram
@@ -1868,6 +1904,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public class CommandSpeakGiveItem : ICommand
@@ -1898,6 +1935,7 @@ namespace CustomProgram
         public bool Continuous { get { return _continuous; } }
     }
 }
+
 
 
 namespace CustomProgram
@@ -1932,6 +1970,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public class CommandSpeakTakeItem : ICommand
@@ -1964,6 +2003,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public class CommandTakeItem : ICommand
@@ -1986,6 +2026,7 @@ namespace CustomProgram
         public bool Continuous { get { return _continuos; } }
     }
 }
+
 
 
 namespace CustomProgram
@@ -2014,6 +2055,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     public class CommandTogglePalette : ICommand
@@ -2036,6 +2078,7 @@ namespace CustomProgram
         public bool Continuous { get { return _continuous; } }
     }
 }
+
 
 
 namespace CustomProgram
@@ -2076,6 +2119,7 @@ namespace CustomProgram
         }
     }
 }
+
 
 
 namespace CustomProgram
@@ -2186,6 +2230,7 @@ namespace CustomProgram
 }
 
 
+
 namespace CustomProgram
 {
     //
@@ -2230,6 +2275,7 @@ namespace CustomProgram
         }
     }
 }
+
 
 
 namespace CustomProgram
@@ -2355,3 +2401,6 @@ namespace CustomProgram
         }
     }
 }
+
+
+
